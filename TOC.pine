@@ -1,0 +1,53 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Ikuma-Hiroyuki
+
+//@version=5
+indicator('Commitments of Traders', 'COT', precision=0)
+
+bool isOption = input.bool(defval=false, title='オプションも含める', tooltip='先物に加えてオプションの残高も加算します。')
+bool isSeparate = input.bool(defval=false, title='売買ポジションを合算しない', tooltip='ショートポジションは薄く表示されます。')
+
+GetCode() =>
+    string _code = syminfo.root == 'NQ' ? '209742' :
+                   syminfo.root == 'ES' ? '13874A' :
+                   syminfo.root == 'ZB' ? '020601' :
+                   syminfo.root == 'UB' ? '020604' :
+                   syminfo.root == 'GC' ? '088691' :
+                   syminfo.root == 'JAPANESE YEN' ? '097741_F' :
+                   ''
+    _code := _code + (isOption ? '_FO' : '_F')
+
+string code = GetCode()
+
+GetPosition(_class) =>
+    float long  = request.security(code + _class + '_L', '', close)
+    float short = request.security(code + _class + '_S', '', close)
+    float total = long - short
+    if isSeparate
+        total := na
+    else
+        long := na
+        short := na
+    [long, short, total]
+
+// Commercials
+[commercialLong, commercialShort, commercial] = GetPosition('_CP')
+plot(commercial, title='Commercials', color=color.new(color.red, 0))
+
+// Large Spec
+[nonCommercialLong, nonCommercialShort, nonCommercial] = GetPosition('_NCP')
+plot(nonCommercial, title='Large Spec', color=color.new(color.green, 0))
+
+// Small Spec
+[nonReportableLong, nonReportableShort, nonReportable] = GetPosition('_NRP')
+plot(nonReportable, title='Small Spec', color=color.new(color.blue, 0))
+
+// 売買別
+plot(commercialLong,     title='Commercials Long',  color=color.new(color.red, 0))
+plot(commercialShort,    title='Commercials Short', color=color.new(color.red, 50))
+plot(nonCommercialLong,  title='Large Spec Long',   color=color.new(color.green, 0))
+plot(nonCommercialShort, title='Large Spec Short',  color=color.new(color.green, 50))
+plot(nonReportableLong,  title='Small Spec Long',   color=color.new(color.blue, 0))
+plot(nonReportableShort, title='Small Spec Short',  color=color.new(color.blue, 50))
+
+hline(0, editable=false)
